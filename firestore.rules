@@ -1,0 +1,208 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasUserProfile() {
+      return signedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return hasUserProfile() && userData().role == role;
+    }
+
+    function isVerifiedNgo() {
+      return hasRole("ngo") && userData().isVerified == true;
+    }
+
+    function ngoIsAvailable() {
+      return !(userData().availabilityStatus is string) ||
+             userData().availabilityStatus == "available";
+    }
+
+    function isRegistrationRole(role) {
+      return role == "restaurant" || role == "ngo";
+    }
+
+    function isValidAvailabilityStatus(value) {
+      return value == "available" || value == "busy";
+    }
+
+    function isValidNotificationType(type) {
+      return type == "new_donation" ||
+             type == "donation_claimed" ||
+             type == "claim_confirmed" ||
+             type == "pickup_completed" ||
+             type == "schedule_requested" ||
+             type == "schedule_approved" ||
+             type == "schedule_rejected";
+    }
+
+    function isValidRecipientKey(recipientKey) {
+      return recipientKey is string && (
+        recipientKey == "role:restaurant" ||
+        recipientKey == "role:ngo" ||
+        recipientKey == "role:admin" ||
+        (recipientKey.matches("^[^/]{6,128}$") &&
+         exists(/databases/$(database)/documents/users/$(recipientKey)))
+      );
+    }
+
+    function canReadNotification(notificationData) {
+      return hasRole("admin") ||
+             (hasUserProfile() &&
+              notificationData.recipientKey == request.auth.uid);
+    }
+
+    match /users/{uid} {
+      allow create: if signedIn() &&
+                    request.auth.uid == uid &&
+                    request.resource.data.uid == uid &&
+                    isRegistrationRole(request.resource.data.role) &&
+                    request.resource.data.isVerified is bool &&
+                    request.resource.data.availabilityStatus is string &&
+                    request.resource.data.availabilityStatus == "available" &&
+                    (
+                      (request.resource.data.role == "restaurant" && request.resource.data.isVerified == true) ||
+                      (request.resource.data.role == "ngo" && request.resource.data.isVerified == false)
+                    );
+      allow read: if signedIn() && (request.auth.uid == uid || hasRole("admin"));
+      allow update: if hasRole("admin") ||
+                    (
+                      signedIn() &&
+                      request.auth.uid == uid &&
+                      resource.data.role == "ngo" &&
+                      request.resource.data.diff(resource.data).changedKeys().hasOnly(["availabilityStatus"]) &&
+                      isValidAvailabilityStatus(request.resource.data.availabilityStatus)
+                    );
+      allow delete: if hasRole("admin");
+    }
+
+    match /donations/{donationId} {
+      allow read: if signedIn();
+      allow create: if hasRole("restaurant") && request.resource.data.restaurantId == request.auth.uid;
+      allow update: if hasRole("admin") ||
+                    (hasRole("restaurant") && resource.data.restaurantId == request.auth.uid) ||
+                    (hasRole("ngo") && request.resource.data.status in ["claimed", "in_progress", "completed"]);
+      allow delete: if hasRole("admin");
+    }
+
+    match /claims/{claimId} {
+      allow read: if hasRole("admin") || (signedIn() && resource.data.ngoId == request.auth.uid);
+      allow create: if isVerifiedNgo() &&
+                    ngoIsAvailable() &&
+                    request.resource.data.ngoId == request.auth.uid;
+      allow update: if hasRole("admin") || (hasRole("ngo") && resource.data.ngoId == request.auth.uid);
+      allow delete: if hasRole("admin");
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if hasRole("admin") ||
+                  (signedIn() &&
+                   (resource.data.ngoId == request.auth.uid ||
+                    resource.data.restaurantId == request.auth.uid));
+
+      allow create: if signedIn() &&
+                    request.resource.data.ngoId == request.auth.uid &&
+                    request.resource.data.claimId is string &&
+                    request.resource.data.donationId is string &&
+                    request.resource.data.restaurantId is string &&
+                    request.resource.data.pickupTime is timestamp &&
+                    request.resource.data.status == "pending" &&
+                    exists(/databases/$(database)/documents/claims/$(request.resource.data.claimId)) &&
+                    get(/databases/$(database)/documents/claims/$(request.resource.data.claimId)).data.ngoId == request.auth.uid &&
+                    request.resource.data.donationId == get(/databases/$(database)/documents/claims/$(request.resource.data.claimId)).data.donationId &&
+                    exists(/databases/$(database)/documents/donations/$(request.resource.data.donationId)) &&
+                    request.resource.data.restaurantId == get(/databases/$(database)/documents/donations/$(request.resource.data.donationId)).data.restaurantId;
+
+      allow update: if hasRole("admin") ||
+                    (
+                      hasRole("restaurant") &&
+                      resource.data.restaurantId == request.auth.uid &&
+                      resource.data.status == "pending" &&
+                      request.resource.data.claimId == resource.data.claimId &&
+                      request.resource.data.donationId == resource.data.donationId &&
+                      request.resource.data.ngoId == resource.data.ngoId &&
+                      request.resource.data.restaurantId == resource.data.restaurantId &&
+                      request.resource.data.pickupTime == resource.data.pickupTime &&
+                      request.resource.data.requestedAt == resource.data.requestedAt &&
+                      request.resource.data.status in ["approved", "rejected"]
+                    ) ||
+                    (
+                      signedIn() &&
+                      resource.data.ngoId == request.auth.uid &&
+                      request.resource.data.claimId == resource.data.claimId &&
+                      request.resource.data.donationId == resource.data.donationId &&
+                      request.resource.data.ngoId == resource.data.ngoId &&
+                      request.resource.data.restaurantId == resource.data.restaurantId &&
+                      request.resource.data.pickupTime is timestamp &&
+                      request.resource.data.rejectionReason is string &&
+                      (resource.data.status == "rejected" || resource.data.status == "pending") &&
+                      request.resource.data.status == "pending"
+                    );
+
+      allow delete: if hasRole("admin");
+    }
+
+    match /ratings/{ratingId} {
+      allow read: if hasRole("admin") ||
+                  (signedIn() &&
+                   (resource.data.ngoId == request.auth.uid ||
+                    resource.data.restaurantId == request.auth.uid));
+
+      allow create: if hasRole("restaurant") &&
+                    request.resource.data.restaurantId == request.auth.uid &&
+                    request.resource.data.donationId == ratingId &&
+                    request.resource.data.rating is int &&
+                    request.resource.data.rating >= 1 &&
+                    request.resource.data.rating <= 5 &&
+                    exists(/databases/$(database)/documents/donations/$(ratingId)) &&
+                    get(/databases/$(database)/documents/donations/$(ratingId)).data.restaurantId == request.auth.uid &&
+                    get(/databases/$(database)/documents/donations/$(ratingId)).data.status == "completed" &&
+                    exists(/databases/$(database)/documents/schedules/$(request.resource.data.claimId)) &&
+                    get(/databases/$(database)/documents/schedules/$(request.resource.data.claimId)).data.donationId == ratingId &&
+                    get(/databases/$(database)/documents/schedules/$(request.resource.data.claimId)).data.ngoId == request.resource.data.ngoId &&
+                    get(/databases/$(database)/documents/schedules/$(request.resource.data.claimId)).data.restaurantId == request.auth.uid;
+
+      allow update: if hasRole("admin") ||
+                    (
+                      hasRole("restaurant") &&
+                      resource.data.restaurantId == request.auth.uid &&
+                      resource.data.donationId == ratingId &&
+                      request.resource.data.donationId == resource.data.donationId &&
+                      request.resource.data.claimId == resource.data.claimId &&
+                      request.resource.data.ngoId == resource.data.ngoId &&
+                      request.resource.data.restaurantId == resource.data.restaurantId &&
+                      exists(/databases/$(database)/documents/donations/$(ratingId)) &&
+                      get(/databases/$(database)/documents/donations/$(ratingId)).data.restaurantId == request.auth.uid &&
+                      get(/databases/$(database)/documents/donations/$(ratingId)).data.status == "completed" &&
+                      request.resource.data.rating is int &&
+                      request.resource.data.rating >= 1 &&
+                      request.resource.data.rating <= 5
+                    );
+
+      allow delete: if hasRole("admin");
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if canReadNotification(resource.data);
+
+      allow create: if false;
+
+      allow update: if hasRole("admin") ||
+                    (hasUserProfile() &&
+                     resource.data.recipientKey == request.auth.uid &&
+                     request.resource.data.diff(resource.data).changedKeys().hasOnly(["read"]) &&
+                     request.resource.data.read is bool);
+
+      allow delete: if hasRole("admin");
+    }
+  }
+}
