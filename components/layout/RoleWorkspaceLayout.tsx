@@ -253,8 +253,8 @@ export function RoleWorkspaceLayout({
 
       <div className="md:pl-72">
         <header className="sticky top-0 z-20 border-b border-sky-100/80 bg-white/80 px-4 py-3 backdrop-blur-xl md:px-8">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex min-w-0 items-center gap-2">
               <button
                 aria-label="Open sidebar"
                 type="button"
@@ -266,18 +266,20 @@ export function RoleWorkspaceLayout({
                 </svg>
               </button>
 
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs uppercase tracking-[0.2em] text-sky-700">Dashboard</p>
-                <p className="text-sm font-semibold text-slate-800">{profile?.name ?? workspaceTitle}</p>
+                <p className="truncate text-sm font-semibold text-slate-800">
+                  {profile?.name ?? workspaceTitle}
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap md:gap-3">
               {user ? <NotificationBell currentUserId={user.uid} notifications={notifications} /> : null}
               <RoleBadge role={role} />
               <Link
                 href="/"
-                className="rounded-xl border border-sky-100 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-all duration-300 ease-in-out hover:bg-sky-50"
+                className="hidden rounded-xl border border-sky-100 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-all duration-300 ease-in-out hover:bg-sky-50 sm:inline-flex"
               >
                 Home
               </Link>

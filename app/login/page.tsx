@@ -50,10 +50,16 @@ export default function LoginPage() {
     try {
       setIsSubmitting(true);
       const role = await loginUser(formData);
-      await refreshProfile();
+      void refreshProfile();
       toast.success("Login successful.");
-      router.replace(getDashboardPath(role));
-      router.refresh();
+      const dashboardPath = getDashboardPath(role);
+
+      if (typeof window !== "undefined") {
+        window.location.assign(dashboardPath);
+        return;
+      }
+
+      router.replace(dashboardPath);
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
     } finally {

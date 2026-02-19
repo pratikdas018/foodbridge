@@ -26,6 +26,8 @@ async function syncServerSession(firebaseUser: User): Promise<SessionResponse> {
 
   const response = await fetch("/api/session/login", {
     method: "POST",
+    credentials: "include",
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
     },

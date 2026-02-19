@@ -85,7 +85,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-sky-100/80 bg-white/85 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <Link href="/" className="inline-flex items-center gap-2">
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-600 to-emerald-500 text-sm font-bold text-white shadow-sm">
             FB
@@ -98,13 +98,22 @@ export function Navbar() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Link
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-sky-50 hover:text-sky-800"
-            href="/"
-          >
-            Home
-          </Link>
+        <nav className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap sm:gap-3">
+          {(!loading && user && dashboardPath) ? (
+            <Link
+              className="hidden rounded-lg px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-sky-50 hover:text-sky-800 sm:inline-flex"
+              href="/"
+            >
+              Home
+            </Link>
+          ) : (
+            <Link
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-sky-50 hover:text-sky-800"
+              href="/"
+            >
+              Home
+            </Link>
+          )}
 
           {!loading && user && dashboardPath ? (
             <>

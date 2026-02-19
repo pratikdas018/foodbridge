@@ -43,11 +43,12 @@ export function NotificationBell({
   return (
     <div className="relative">
       <button
-        className="relative rounded-xl border border-sky-100 bg-white/90 px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-sky-50"
+        className="relative inline-flex items-center rounded-xl border border-sky-100 bg-white/90 px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-sky-50 sm:px-3"
         onClick={() => setIsOpen((prev) => !prev)}
         type="button"
       >
-        Notifications
+        <span className="hidden sm:inline">Notifications</span>
+        <span className="sm:hidden">Alerts</span>
         {unreadCount > 0 ? (
           <span className="ml-2 rounded-full bg-rose-600 px-1.5 py-0.5 text-xs font-semibold text-white">
             {unreadCount}
