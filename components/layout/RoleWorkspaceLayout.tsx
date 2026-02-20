@@ -100,6 +100,14 @@ function RoleBadge({ role }: { role: WorkspaceRole }) {
   );
 }
 
+function mobileMenuLabel(label: string): string {
+  if (label === "Overview") {
+    return "Dashboard";
+  }
+
+  return label;
+}
+
 function RouteContentAnimator({ children }: { children: React.ReactNode }) {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -252,34 +260,51 @@ export function RoleWorkspaceLayout({
       </aside>
 
       <div className="md:pl-72">
-        <header className="sticky top-0 z-20 border-b border-sky-100/80 bg-white/80 px-4 py-3 backdrop-blur-xl md:px-8">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex min-w-0 items-center gap-2">
+        <header className="sticky top-0 z-20 border-b border-sky-100/80 bg-white/90 px-4 py-3 backdrop-blur-xl md:px-8">
+          <div className="flex justify-between items-center md:hidden">
+            <Link className="inline-flex items-center gap-2" href="/">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 text-xs font-bold text-white">
+                FB
+              </span>
+              <span className="text-lg font-bold gradient-title" style={{ fontFamily: "var(--font-sora)" }}>
+                FoodBridge
+              </span>
+            </Link>
+            <div className="flex items-center gap-2">
+              {user ? (
+                <NotificationBell
+                  currentUserId={user.uid}
+                  notifications={notifications}
+                  mobileIconOnly
+                />
+              ) : null}
               <button
                 aria-label="Open sidebar"
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-sky-100 bg-white text-slate-700 transition-all duration-300 ease-in-out hover:bg-sky-50 md:hidden"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-sky-100 bg-white px-4 py-2 text-slate-700 transition-all duration-300 ease-in-out hover:bg-sky-50"
                 onClick={() => setIsMobileOpen(true)}
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                   <path d="M4 7h16M4 12h16M4 17h16" />
                 </svg>
               </button>
+            </div>
+          </div>
 
-              <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.2em] text-sky-700">Dashboard</p>
-                <p className="truncate text-sm font-semibold text-slate-800">
-                  {profile?.name ?? workspaceTitle}
-                </p>
-              </div>
+          <div className="hidden items-center justify-between gap-3 md:flex">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.2em] text-sky-700">Dashboard</p>
+              <p className="truncate text-sm font-semibold text-slate-800 lg:max-w-[28rem]">
+                {profile?.name ?? workspaceTitle}
+              </p>
             </div>
 
-            <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap md:gap-3">
+            <div className="flex items-center gap-3">
               {user ? <NotificationBell currentUserId={user.uid} notifications={notifications} /> : null}
               <RoleBadge role={role} />
               <Link
                 href="/"
-                className="hidden rounded-xl border border-sky-100 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-all duration-300 ease-in-out hover:bg-sky-50 sm:inline-flex"
+                className="rounded-xl border border-sky-100 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-all duration-300 ease-in-out hover:bg-sky-50"
               >
                 Home
               </Link>
@@ -307,7 +332,7 @@ export function RoleWorkspaceLayout({
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-sky-100 bg-white p-6 shadow-2xl transition-all duration-300 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 h-screen w-72 border-r border-sky-100 bg-white p-6 shadow-2xl transform transition-transform duration-300 ease-in-out md:hidden ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -341,18 +366,29 @@ export function RoleWorkspaceLayout({
                 key={item.href}
                 href={item.href}
                 prefetch
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-300 ease-in-out ${
+                className={`flex min-h-[44px] items-center gap-3 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 ease-in-out ${
                   isActive
                     ? "bg-gradient-to-r from-sky-600 to-emerald-500 text-white"
                     : "text-slate-700 hover:bg-sky-50 hover:text-sky-700"
                 }`}
               >
                 <Icon icon={item.icon} />
-                <span>{item.label}</span>
+                <span>{mobileMenuLabel(item.label)}</span>
               </Link>
             );
           })}
         </nav>
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsMobileOpen(false);
+            void handleLogout();
+          }}
+          className="mt-3 flex min-h-[44px] w-full items-center justify-center rounded-lg bg-gradient-to-r from-slate-900 to-slate-700 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 ease-in-out hover:opacity-90"
+        >
+          Logout
+        </button>
       </aside>
     </div>
   );

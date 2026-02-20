@@ -29,7 +29,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(rule.prefix),
   );
 
-  if (matchingProtectedRule && !session) {
+  if (matchingProtectedRule && (!session || !role)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

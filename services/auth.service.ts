@@ -21,6 +21,29 @@ interface SessionResponse {
   role: UserRole;
 }
 
+async function notifyAdminOnNewUser(payload: {
+  name: string;
+  email: string;
+  role: RegisterPayload["role"];
+}): Promise<void> {
+  try {
+    await fetch("/api/sendNewUserEmail", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: payload.name,
+        email: payload.email,
+        role: payload.role,
+        signupTime: new Date().toISOString(),
+      }),
+    });
+  } catch (error) {
+    console.warn("Failed to notify admin about new signup.", error);
+  }
+}
+
 async function syncServerSession(firebaseUser: User): Promise<SessionResponse> {
   const idToken = await firebaseUser.getIdToken(true);
 
@@ -59,6 +82,12 @@ export async function registerUser(payload: RegisterPayload): Promise<UserRole> 
     isVerified: payload.role === "ngo" ? false : true,
     availabilityStatus: "available",
     createdAt: serverTimestamp(),
+  });
+
+  await notifyAdminOnNewUser({
+    name: payload.name,
+    email: payload.email,
+    role: payload.role,
   });
 
   const session = await syncServerSession(userCredential.user);

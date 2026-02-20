@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AdminAnalyticsCards } from "@/components/admin/AdminAnalyticsCards";
@@ -33,6 +34,14 @@ export default function AdminDashboardPage() {
         subtitle="Manage users, donations, and donation statuses."
         tone="admin"
       >
+        <div className="flex justify-end">
+          <Link
+            href="/admin/announcements"
+            className="rounded-xl border border-violet-100 bg-white/90 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50"
+          >
+            Open Announcements
+          </Link>
+        </div>
         <AdminAnalyticsCards />
         <UsersTable users={users} currentAdminUid={user?.uid ?? null} />
         <DonationsAdminTable donations={donations} />
